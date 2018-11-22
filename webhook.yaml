@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: webhook
+  name: webhook
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: webhook
+  template:
+    metadata:
+      labels:
+        app: webhook
+      name: webhook
+    spec:
+      containers:
+        - name: webhook
+          image: az82/showcase-webhook
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8443
+          resources:
+            requests:
+                memory: "8Mi"
+                cpu: "100m"
+            limits:
+                memory: "128Mi"
+                cpu: "1000m"
+          volumeMounts:
+          - name: tls-secret
+            mountPath: "/.certs"
+            readOnly: true
+      volumes:
+      - name: tls-secret
+        secret:
+          secretName: webhook-tls
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: webhook
+spec:
+  selector:
+    app: webhook
+  ports:
+  - protocol: TCP
+    port: 443
+    targetPort: 8443
+---
+apiVersion: admissionregistration.k8s.io/v1beta1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: test-validating-webhook-configuration
+webhooks:
+  - name: test-validating-webhook.az82.de
+    rules:
+      - operations: [ "CREATE" ]
+        apiGroups: ["apps", ""]
+        apiVersions: ["v1"]
+        resources: ["deployments"]
+    failurePolicy: Fail
+    clientConfig:
+      service:
+        name: webhook
+        namespace: admissioncontrol
+        path: "/validate"
+      caBundle: REPLACE-ME
+    namespaceSelector:
+      matchLabels:
+        admission-webhook: enabled
