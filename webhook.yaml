@@ -23,19 +23,42 @@ spec:
             - containerPort: 8443
           resources:
             requests:
-                memory: "8Mi"
-                cpu: "100m"
+              cpu: 100m
+              memory: 32Mi
             limits:
-                memory: "128Mi"
-                cpu: "1000m"
+              cpu: 1000m
+              memory: 128Mi
           volumeMounts:
           - name: tls-secret
-            mountPath: "/.certs"
+            mountPath: /.certs
             readOnly: true
+        - name: opa-sidecar
+          image: openpolicyagent/opa:0.10.1
+          resources:
+            requests:
+              cpu: 100m
+              memory: 32Mi
+            limits:
+              cpu: 1000m
+              memory: 128Mi
+          args:
+          - "run"
+          - "--ignore=.*"  # exclude hidden dirs created by Kubernetes
+          - "-s"
+          - "-w"
+          - "/policies"
+          volumeMounts:
+          - readOnly: true
+            mountPath: /policies
+            name: policies
       volumes:
       - name: tls-secret
         secret:
           secretName: webhook-tls
+      - name: policies
+        configMap:
+          name: webhook-policies
+
 ---
 kind: Service
 apiVersion: v1

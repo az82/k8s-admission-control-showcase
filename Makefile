@@ -24,6 +24,9 @@ deploy: .certs container
 	@echo -e "\nCreating secret..."
 	kubectl create secret tls -n $(NAMESPACE) webhook-tls --cert="$(CERTFILE)" --key="$(KEYFILE)" --dry-run -o yaml | kubectl apply -f -
 
+	@echo -e "\nCreating configmap..."
+	kubectl create configmap -n $(NAMESPACE) webhook-policies --from-file policies/
+
 	@echo -e "\nDeploying webhook..."
 	sed -E "s/(caBundle:).*\$$/\1 $$(base64 "$(CA_CERTFILE)" | tr -d '\r\n')/" webhook.yaml | kubectl apply -n $(NAMESPACE) -f -
 
@@ -71,4 +74,4 @@ clean-kubernetes:
 	docker rmi -f $(IMAGE_NAME) 2> /dev/null
 
 	@echo -e "\nDeleting webhook deployments..."
-	kubectl delete namespace $(NAMESPACE)
+	kubectl delete namespace $(NAMESPACE) --ignore-not-found=true

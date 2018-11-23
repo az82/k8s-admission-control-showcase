@@ -1,11 +1,26 @@
 # Kubernetes Admission Control and Archiving Showcase
 
 Deploys a custom Kubernetes validating admission controller. 
-That controller will review deployments for namespaces with the label `admission-webhook: enabled`.
+The controller will review deployments for namespaces with the label `admission-webhook: enabled`.
 
-At the moment, the implementation denies all requests.
+The controller then uses an OPA (OpenPolicyAgent) sidecar to decide what to do with the deployment.
+
+That step of indirection allows us to use the
+[OPA data API](https://www.openpolicyagent.org/docs/rest-api.html#data-api)
+instead of the Query API. The data API is much more convenient to manage.
+
+OPA can not only allow or deny an admission, it can also provide more advanced policies, most importantly control taking
+actions upon deployments.
+
+The policies define a set of processors that can be called out-of-band if the deployment is allowed. The deployment
+won't be slowed down by steps that can take a lot of time. This approach makes it easy to fulfil auditing or archiving
+requirements.
+
+In the future, things like max/min resource limits, number of instances and so on could also be controlled by
+central OPA policies.
 
 ## Prerequisites
+
 - GNU Make
 - Kubectl
 - Docker
@@ -13,30 +28,43 @@ At the moment, the implementation denies all requests.
 - OpenSSL
 - [Base64](https://www.fourmilab.ch/webtools/base64/)
 - Kubernetes Cluster
-    
+
     The Makefile assumes that `docker build` will install the image in the target cluster's registry.
     This is the case for Docker Desktop and Minikube, but not for remote clusters.
 
+- [OPA](https://www.openpolicyagent.org/) (Only needed for manual local testing)
+
 ## How to Use
 
-1. Build & Deploy the Webhook
+1. Build & Deploy the Web hook
 
     ```bash
     make deploy
     ```
 
-
 2. Try to deploy an application
-    
+
     ```bash
     kubectl apply -f hello-world.yaml
     ```
-    
+
 3. You should get the following error message
 
+    ```text
+    Error from server (Forbidden): error when creating "hello-world.yaml": admission webhook "test-validating-webhook.az82.de" denied the request: No Git repository label, No Git commit hash label
     ```
-    Error from server (Forbidden): error when creating “hello-world-deployment.yaml”: admission webhook “test-validating-webhook.az82.de” denied the request: You’re not getting in with these shoes.
-    ```
-    
 
+4. [Inspect the policies](policies). You can then try to create a deployment that fulfils the policies or try to tweak the policies.
 
+## See also
+
+- [Kubernetes Admission Control Documentation](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/)
+- [OPA Documentation](https://www.openpolicyagent.org/docs/)
+
+## Pitfalls
+
+Kubernetes currently does not support creating config maps recursively from a directory. That means that policies
+stored in a config map cannot be organized in directories.
+See 
+[kubernetes/kubernetes#62421](https://github.com/kubernetes/kubernetes/issues/62421)
+for reference

@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/resty.v1"
 	"io/ioutil"
@@ -12,12 +13,17 @@ import (
 	"time"
 )
 
+const opaPort = 8181
+const admissionControllerUrl = "http://localhost:8080/validate"
+const okAdmissionReviewFile = "test/admission-review/ok.json"
+
 func TestHttpService(t *testing.T) {
 	// Before
 	startServer()
+	startOpaMock()
 
 	// Given
-	requestBody, err := ioutil.ReadFile("test-admission-review.json")
+	requestBody, err := ioutil.ReadFile(okAdmissionReviewFile)
 	if err != nil {
 		glog.Fatal(err)
 		t.FailNow()
@@ -31,10 +37,10 @@ func TestHttpService(t *testing.T) {
 
 	// When
 	response, err := resty.R().
-		SetHeader("Content-Type", "application/json").
-		SetHeader("Accept", "application/json").
+		SetHeader(contentTypeHeader, jsonContentType).
+		SetHeader(acceptHeader, jsonContentType).
 		SetBody(requestBody).
-		Post("http://localhost:8080/validate")
+		Post(admissionControllerUrl)
 	if err != nil {
 		assert.Fail(t, "Error executing request", err)
 	}
@@ -54,13 +60,66 @@ func TestHttpService(t *testing.T) {
 
 	// Cleanup
 	shutdownServer()
+	shutdownOpaMock()
+}
+
+func opaMock(responseWriter http.ResponseWriter, request *http.Request) {
+	contentType := request.Header.Get(contentTypeHeader)
+	if contentType != jsonContentType {
+		badRequest(responseWriter, "Unexpected content type \"%s\"", contentType)
+		return
+	}
+
+	requestBody := getRequestBody(request)
+
+	admissionRequest := OpaAdmissionRequest{}
+	err := json.Unmarshal(requestBody, &admissionRequest)
+	if err != nil {
+		badRequest(responseWriter, "Error deserializing request: %s", err)
+		return
+	}
+
+	mockResponse := struct {
+		Policy AdmissionPolicy `json:"result"`
+	}{
+		Policy: AdmissionPolicy{
+			Allow: true,
+		},
+	}
+
+	responseBody, err := json.Marshal(mockResponse)
+	if err != nil {
+		glog.Error(err)
+	}
+
+	responseWriter.Write(responseBody)
+}
+
+var opaMockServer *http.Server
+
+func startOpaMock() {
+	go func() {
+		http.HandleFunc("/v1/data/admissioncontrol/deployment/policy", opaMock)
+
+		opaMockServer = &http.Server{Addr: fmt.Sprintf(":%d", opaPort)}
+		err := opaMockServer.ListenAndServe()
+		if err != nil {
+			glog.Fatal(err)
+		}
+
+	}()
+	time.Sleep(500 * time.Millisecond)
+}
+
+func shutdownOpaMock() {
+	opaMockServer.Shutdown(nil)
 }
 
 func startServer() {
 	go func() {
 		main()
 	}()
-	time.Sleep(1 * time.Second)
+	time.Sleep(500 * time.Millisecond)
 }
 
 func shutdownServer() {
