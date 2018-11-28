@@ -62,6 +62,20 @@ central OPA policies.
 
 5. [Inspect the policies](policies). You can then try to create a deployment that fulfils the policies or try to tweak the policies.
 
+## Cleaning up
+
+- Undeploy everything
+
+    ```bash
+    make undeploy
+    ```
+
+- Clean the workspace
+
+    ```bash
+    make clean
+    ```
+
 ## See also
 
 - [Kubernetes Admission Control Documentation](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/)

@@ -2,6 +2,7 @@ SHELL = /bin/bash
 
 IMAGE_NAME = az82/showcase-webhook
 NAMESPACE = admissioncontrol
+APPS_NAMESPACE = apps
 
 CA_SUBJ = "/C=DE/O=az82/OU=webhook-showcase/CN=ca"
 CERT_SUBJ = "/C=DE/O=az82/OU=webhook-showcase/CN=webhook.$(NAMESPACE).svc"
@@ -38,6 +39,9 @@ undeploy:
 
 	@echo -e "\nDeleting webhook deployments..."
 	kubectl delete namespace $(NAMESPACE) --ignore-not-found=true
+
+	@echo -e "\nDeleting app deployments..."
+	kubectl delete namespace $(APPS_NAMESPACE) --ignore-not-found=true
 
 
 .PHONY: container
