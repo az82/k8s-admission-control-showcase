@@ -1,4 +1,1 @@
-.certs/
-.srl
-main
-main-linux-amd64
+build/

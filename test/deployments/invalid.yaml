@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: apps
+  labels:
+    admission-webhook: enabled
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-kubernetes-invalid
+  namespace: apps  
+  annotations:
+    git.repository: git://github.com/az82/blabla.git
+    git.commit: no-such-commit-hash
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hello-kubernetes-invalid
+  template:
+    metadata:
+      labels:
+        app: hello-kubernetes-invalid
+    spec:
+      containers:
+      - name: hello-kubernetes
+        image: paulbouwer/hello-kubernetes:latest
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+              memory: "128Mi"
+              cpu: "100m"
+          limits:
+              memory: "256Mi"
+              cpu: "1000m"        

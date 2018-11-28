@@ -14,7 +14,7 @@ policy = {
 # Admission denied result
 policy = {
     "allow": false,
-    "reason": concat(", ", deny)
+    "reason": deny
 } {
     count(deny) > 0
 }
@@ -22,34 +22,38 @@ policy = {
 
 # Admission checks
 
-deny["No Git repository label"] {
+deny["No Git repository annotation"] {
     policies.archivingRequired
-    not input.request.object.metadata.labels["git.repository"]
+    not gitRepositoryAnnotation(input)
 }
 
-deny["Invalid Git repository label"] {
+deny["Invalid Git repository annotation"] {
     policies.archivingRequired
-    not startswith(input.request.object.metadata.labels["git.repository"], "https://")
+    not startswith(gitRepositoryAnnotation(input), "https://")
 }
 
-deny["No Git commit hash label"] {
+deny["No Git commit hash annotation"] {
     policies.archivingRequired
-    not input.request.object.metadata.labels["git.commit"]
+    not gitCommitAnnotation(input)
 }
 
-deny["Invalid Git commit hash label"] {
+deny["Invalid Git commit hash annotation"] {
     policies.archivingRequired
-    not re_match(`^[a-f0-9]{40}$`, input.request.object.metadata.labels["git.commit"])
+    not re_match(`^[a-f0-9]{40}$`, gitCommitAnnotation(input))
 }
 
 deny[msg] {
     endswith(input.request.object.spec.template.spec.containers[i].image, ":latest")
-    msg = sprintf("No explicit image version for the container %s", [
-        input.request.object.spec.template.spec.containers[i].name
-    ])
+    msg = sprintf("No explicit image version for the container %s", [input.request.object.spec.template.spec.containers[i].name])
 }
 
 # Admission post-processors
 
 processors["https://archiving-processor.admissioncontrol.svc/archive-deployment"] { policies.archivingRequired }
 processors["https://auditing-processor.admissioncontrol.svc/audit-deployment"] { policies.auditingRequired }
+
+
+# Shortcut functions
+
+gitRepositoryAnnotation(x)  = x.request.object.metadata.annotations["git.repository"]
+gitCommitAnnotation(x) = x.request.object.metadata.annotations["git.commit"]

@@ -30,7 +30,7 @@ spec:
               memory: 128Mi
           volumeMounts:
           - name: tls-secret
-            mountPath: /.certs
+            mountPath: /certs
             readOnly: true
         - name: opa-sidecar
           image: openpolicyagent/opa:0.10.1

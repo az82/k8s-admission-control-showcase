@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"os"
+	"strings"
 
 	"github.com/golang/glog"
 	"gopkg.in/resty.v1"
@@ -17,10 +17,10 @@ import (
 
 const httpPort = 8080
 const httpsPort = 8443
-const opaUrl = "http://localhost:8181/v1/data/admissioncontrol/deployment/policy"
+const opaURL = "http://localhost:8181/v1/data/admissioncontrol/deployment/policy"
 
-const certFile = ".certs/tls.crt"
-const keyFile = ".certs/tls.key"
+const certFile = "certs/tls.crt"
+const keyFile = "certs/tls.key"
 
 const contentTypeHeader = "Content-Type"
 const acceptHeader = "Accept"
@@ -31,14 +31,14 @@ type AdmissionPolicy struct {
 	// Indicates whether or not the admission request should be permitted
 	Allow bool `json:"allow"`
 
-	// Human-readable message detailing the reasons admission was denied
+	// Human-readable messages detailing the reasons admission was denied
 	// Ignored if Allow is true
-	Reason string `json:"reason,omitempty"`
+	Reasons []string `json:"reasons,omitempty"`
 
 	// List of URLs deployment processors that should be called with this deployment
 	// Each processor will be called with the deployments AdmissionReview as request body
 	// Ignored if Allow is false
-	Processors []url.URL `json:"processors,omitempty"`
+	Processors []string `json:"processors,omitempty"`
 }
 
 // OpaAdmissionRequest is a wrapper for sending k8sAdmission.AdmissionReview to OPA
@@ -59,6 +59,7 @@ func getAdmissionPolicy(admissionReview k8sAdmission.AdmissionReview) (*Admissio
 
 	requestBody, err := json.Marshal(opaRequest)
 	if err != nil {
+		glog.Error("Error serializing OPA request ", string(requestBody))
 		return nil, err
 	}
 
@@ -66,7 +67,7 @@ func getAdmissionPolicy(admissionReview k8sAdmission.AdmissionReview) (*Admissio
 		SetHeader(contentTypeHeader, jsonContentType).
 		SetHeader(acceptHeader, jsonContentType).
 		SetBody(requestBody).
-		Post(opaUrl)
+		Post(opaURL)
 	if err != nil {
 		return nil, err
 	}
@@ -74,6 +75,7 @@ func getAdmissionPolicy(admissionReview k8sAdmission.AdmissionReview) (*Admissio
 	opaResponse := &OpaAdmissionResponse{}
 	err = json.Unmarshal(response.Body(), opaResponse)
 	if err != nil {
+		glog.Error("Error deserializing OPA response ", string(response.Body()))
 		return nil, err
 	}
 
@@ -87,7 +89,7 @@ func addAdmissionResponse(admissionReview *k8sAdmission.AdmissionReview, admissi
 		status.Status = "Success" // As prescribed by the k8sMeta.Status spec
 	} else {
 		status.Status = "Failure" // As prescribed by the k8sMeta.Status spec
-		status.Message = admissionPolicy.Reason
+		status.Message = strings.Join(admissionPolicy.Reasons, ", ")
 		// HTTP Status is 403 Forbidden
 		status.Reason = k8sMeta.StatusReasonForbidden
 		status.Code = http.StatusForbidden
@@ -117,8 +119,8 @@ func badRequest(response http.ResponseWriter, msg string, args ...interface{}) {
 	http.Error(response, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 }
 
-func internalError(response http.ResponseWriter, args ...interface{}) {
-	glog.Error(args...)
+func internalError(response http.ResponseWriter, msg string, args ...interface{}) {
+	glog.Errorf(msg, args...)
 	http.Error(response, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 }
 
@@ -143,7 +145,7 @@ func validate(responseWriter http.ResponseWriter, request *http.Request) {
 
 	admissionPolicy, err := getAdmissionPolicy(admissionReview)
 	if err != nil {
-		internalError(responseWriter, "Is OPA running?", err)
+		internalError(responseWriter, "Error contacting OPA: %s", err)
 		return
 	}
 
@@ -151,14 +153,14 @@ func validate(responseWriter http.ResponseWriter, request *http.Request) {
 
 	responseBody, err := json.Marshal(admissionReview)
 	if err != nil {
-		internalError(responseWriter, err)
+		internalError(responseWriter, "Error marshalling response: %s", err)
 		return
 	}
 	glog.Info("Review response ", string(responseBody))
 
 	_, err = responseWriter.Write(responseBody)
 	if err != nil {
-		internalError(responseWriter, err)
+		internalError(responseWriter, "Error writing response: %s", err)
 	}
 
 }
@@ -173,7 +175,7 @@ func main() {
 
 	// Serve HTTPs
 	// Skip if no certificate are provided for easy debugging
-	if _, err := os.Stat(".certs/tls.crt"); !os.IsNotExist(err) {
+	if _, err := os.Stat("certs/tls.crt"); !os.IsNotExist(err) {
 		glog.Infof("Listening on HTTPs port %d", httpsPort)
 		httpsServer = &http.Server{Addr: fmt.Sprintf(":%d", httpsPort)}
 		go func() {

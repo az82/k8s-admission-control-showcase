@@ -42,19 +42,25 @@ central OPA policies.
     make deploy
     ```
 
-2. Try to deploy an application
+2. Try to deploy an application that does not meet the policy
 
     ```bash
-    kubectl apply -f hello-world.yaml
+    kubectl apply -f test/deployments/invalid.yaml
     ```
 
 3. You should get the following error message
 
     ```text
-    Error from server (Forbidden): error when creating "hello-world.yaml": admission webhook "test-validating-webhook.az82.de" denied the request: No Git repository label, No Git commit hash label
+    Error from server (Forbidden): error when creating "test/deployments/invalid.yaml": admission webhook "test-validating-webhook.az82.de" denied the request: No explicit image version for the container hello-kubernetes, Invalid Git repository annotation, Invalid Git commit hash annotation
     ```
 
-4. [Inspect the policies](policies). You can then try to create a deployment that fulfils the policies or try to tweak the policies.
+4. Try to deploy an application that meets the policy
+
+    ```bash
+    kubectl apply -f test/deployments/valid.yaml
+    ```
+
+5. [Inspect the policies](policies). You can then try to create a deployment that fulfils the policies or try to tweak the policies.
 
 ## See also
 

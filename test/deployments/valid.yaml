@@ -8,20 +8,20 @@ metadata:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: hello-kubernetes
+  name: hello-kubernetes-valid
   namespace: apps  
   annotations:
-    git-repository: "https://github.com/az82/blabla.git"
-    git-commit: "12345"
+    git.repository: https://github.com/az82/blabla.git
+    git.commit: f95f0966bbc36e95da4e55090dd2218182ce933a
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: hello-kubernetes
+      app: hello-kubernetes-valid
   template:
     metadata:
       labels:
-        app: hello-kubernetes
+        app: hello-kubernetes-valid
     spec:
       containers:
       - name: hello-kubernetes
