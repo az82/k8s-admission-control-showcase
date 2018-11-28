@@ -24,7 +24,7 @@ central OPA policies.
 - GNU Make
 - Kubectl
 - Docker
-- Go 1.11
+- Go > 1.11 (Because we are using [Go modules](https://github.com/golang/go/wiki/Modules))
 - OpenSSL
 - [Base64](https://www.fourmilab.ch/webtools/base64/)
 - Kubernetes Cluster
