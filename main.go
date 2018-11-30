@@ -73,11 +73,15 @@ func getAdmissionPolicy(admissionReview k8sAdmission.AdmissionReview) (*Admissio
 	}
 
 	opaResponse := &OpaAdmissionResponse{}
-	err = json.Unmarshal(response.Body(), opaResponse)
+	responseBody := response.Body()
+
+	err = json.Unmarshal(responseBody, opaResponse)
 	if err != nil {
-		glog.Error("Error deserializing OPA response ", string(response.Body()))
+		glog.Error("Error deserializing OPA response ", string(responseBody))
 		return nil, err
 	}
+
+	glog.Info("OPA response ", string(responseBody))
 
 	return &opaResponse.Policy, nil
 }

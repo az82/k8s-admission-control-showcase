@@ -14,7 +14,7 @@ policy = {
 # Admission denied result
 policy = {
     "allow": false,
-    "reason": deny
+    "reasons": deny
 } {
     count(deny) > 0
 }
@@ -43,6 +43,7 @@ deny["Invalid Git commit hash annotation"] {
 }
 
 deny[msg] {
+    policies.noSnapshots
     endswith(input.request.object.spec.template.spec.containers[i].image, ":latest")
     msg = sprintf("No explicit image version for the container %s", [input.request.object.spec.template.spec.containers[i].name])
 }

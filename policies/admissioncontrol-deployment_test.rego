@@ -38,7 +38,7 @@ test_admission_granted {
 test_latest_tag {
     policy == {
         "allow": false,
-        "reason": {"No explicit image version for the container some-container"}
+        "reasons": {"No explicit image version for the container some-container"}
     }
     with input as {
         "request" : {
@@ -70,7 +70,7 @@ test_latest_tag {
 test_no_git_repo_admission {
      policy == {
         "allow": false,
-        "reason": {"No Git repository annotation"}
+        "reasons": {"No Git repository annotation"}
     }
     with input as {
         "request" : {
@@ -101,7 +101,7 @@ test_no_git_repo_admission {
 test_invalid_git_repo_admission_denied {
      policy == {
         "allow": false,
-        "reason": {"Invalid Git repository annotation"}
+        "reasons": {"Invalid Git repository annotation"}
     }
     with input as {
         "request" : {
@@ -132,7 +132,7 @@ test_invalid_git_repo_admission_denied {
 test_no_git_commit_hash {
      policy == {
         "allow": false,
-        "reason": {"No Git commit hash annotation"}
+        "reasons": {"No Git commit hash annotation"}
     }
     with input as {
         "request" : {
@@ -162,7 +162,7 @@ test_no_git_commit_hash {
 invalid_git_commit_hash {
      policy == {
         "allow": false,
-        "reason": {"Invalid Git commit hash annotation"}
+        "reasons": {"Invalid Git commit hash annotation"}
     }
     with input as {
         "request" : {
